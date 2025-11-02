@@ -6,11 +6,7 @@ export type AssetType = "image" | "video";
 
 export type AssetProvider =
   | "midjourney"
-  | "dall-e"
-  | "stable-diffusion"
-  | "veo"
-  | "sora"
-  | "flux";
+  | "veo";
 
 export interface AssetMetadata {
   width?: number;

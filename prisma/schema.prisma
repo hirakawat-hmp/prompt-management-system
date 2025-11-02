@@ -1,0 +1,89 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Application Models
+// ============================================
+// These tables coexist with Mastra's internal tables
+// (mastra_messages, mastra_threads, etc.) in the same DB
+
+model Project {
+  id               String    @id @default(cuid())
+  name             String
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  prompts          Prompt[]
+
+  @@map("projects")
+}
+
+model Prompt {
+  id               String    @id @default(cuid())
+  projectId        String
+  type             PromptType
+  content          String
+  userFeedback     String?
+  aiComment        String?
+  mastraMessageId  String?   @unique  // Reference to Mastra message ID
+  parentId         String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  parent           Prompt?   @relation("PromptHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children         Prompt[]  @relation("PromptHierarchy")
+  assets           Asset[]
+
+  @@index([projectId])
+  @@index([parentId])
+  @@index([mastraMessageId])
+  @@map("prompts")
+}
+
+model Asset {
+  id               String    @id @default(cuid())
+  promptId         String
+  type             AssetType
+  url              String
+  provider         AssetProvider
+  width            Int?
+  height           Int?
+  duration         Int?      // seconds
+  fileSize         Int?      // bytes
+  mimeType         String?
+  createdAt        DateTime  @default(now())
+
+  prompt           Prompt    @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([promptId])
+  @@map("assets")
+}
+
+// ============================================
+// Enums
+// ============================================
+
+enum PromptType {
+  IMAGE
+  VIDEO
+}
+
+enum AssetType {
+  IMAGE
+  VIDEO
+}
+
+enum AssetProvider {
+  MIDJOURNEY
+  VEO
+}

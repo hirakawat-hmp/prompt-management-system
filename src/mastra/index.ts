@@ -10,8 +10,11 @@ export const mastra = new Mastra({
   workflows: { weatherWorkflow },
   agents: { weatherAgent },
   storage: new LibSQLStore({
-    // stores observability, scores, ... into memory storage, if it needs to persist, change to file:../mastra.db
-    url: ":memory:",
+    // Persistent storage for observability, scores, messages, and threads
+    // Shared with Prisma for application data (Project, Prompt, Asset)
+    // Path is relative to .mastra/output directory
+    // "file:../../prisma/mastra.db" resolves to prisma/mastra.db from project root
+    url: "file:../../prisma/mastra.db",
   }),
   logger: new PinoLogger({
     name: 'Mastra',
