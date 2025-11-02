@@ -8,7 +8,6 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
-import { mastra } from '@/mastra';
 import { toFrontendProject } from '@/lib/type-adapters';
 import { createId } from '@paralleldrive/cuid2';
 import type { Project } from '@/types/project';
@@ -61,13 +60,10 @@ export async function createProject(
     // Generate project ID
     const projectId = createId();
 
-    // Create Mastra thread first (using projectId as threadId)
-    await mastra.memory.createThread({
-      threadId: projectId,
-      resourceid: 'default',
-    });
-
     // Create Prisma project
+    // Note: Mastra thread creation is deferred to when AI features are actually used
+    // (e.g., when generating prompts with AI). This simplifies project creation
+    // and avoids coupling with Mastra's memory system upfront.
     const prismaProject = await prisma.project.create({
       data: {
         id: projectId,

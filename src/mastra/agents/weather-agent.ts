@@ -1,6 +1,7 @@
 import { Agent } from '@mastra/core/agent';
 import { Memory } from '@mastra/memory';
 import { LibSQLStore } from '@mastra/libsql';
+import { join } from 'path';
 import { weatherTool } from '../tools/weather-tool';
 
 export const weatherAgent = new Agent({
@@ -24,7 +25,8 @@ export const weatherAgent = new Agent({
 
   memory: new Memory({
     storage: new LibSQLStore({
-      url: 'file:../mastra.db', // path is relative to the .mastra/output directory
+      // Use absolute path to avoid relative path resolution issues
+      url: `file:${join(process.cwd(), 'prisma', 'mastra.db')}`,
     }),
   }),
 });

@@ -17,13 +17,17 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
+import { Button } from '@/components/ui/button';
+import { Plus } from 'lucide-react';
 import type { Prompt } from '@/types/prompt';
 import type { PromptNode, PromptEdge } from '@/types/graph';
 import { elkLayoutGraph } from './utils/elkLayoutGraph';
 import PromptNodeComponent from './PromptNode';
 import { PromptEdge as PromptEdgeComponent } from './PromptEdge';
+import { NewPromptModal } from '@/components/prompts/NewPromptModal';
 
 export interface PromptGraphProps {
+  projectId: string;
   prompts: Prompt[];
   selectedPromptId?: string;
   onPromptSelect?: (promptId: string) => void;
@@ -40,6 +44,7 @@ const edgeTypes: EdgeTypes = {
 };
 
 export function PromptGraph({
+  projectId,
   prompts,
   selectedPromptId,
   onPromptSelect,
@@ -49,6 +54,7 @@ export function PromptGraph({
   const [isClient, setIsClient] = useState(false);
   const [nodes, setNodes] = useState<PromptNode[]>([]);
   const [edges, setEdges] = useState<PromptEdge[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
@@ -119,7 +125,21 @@ export function PromptGraph({
   }
 
   return (
-    <div className="h-full w-full">
+    <div className="h-full w-full relative">
+      {/* New Prompt Button - Absolute positioned in top-right */}
+      <div className="absolute top-4 right-4 z-10">
+        <Button
+          onClick={() => setIsModalOpen(true)}
+          size="default"
+          variant="default"
+          aria-label="New Prompt"
+        >
+          <Plus />
+          New Prompt
+        </Button>
+      </div>
+
+      {/* ReactFlow Graph */}
       <ReactFlow
         nodes={nodes as any}
         edges={edges as any}
@@ -162,6 +182,17 @@ export function PromptGraph({
           />
         )}
       </ReactFlow>
+
+      {/* New Prompt Modal */}
+      <NewPromptModal
+        projectId={projectId}
+        open={isModalOpen}
+        onOpenChange={setIsModalOpen}
+        onSuccess={() => {
+          // Optionally show a success notification
+          console.log('New prompt created successfully!');
+        }}
+      />
     </div>
   );
 }

@@ -1,15 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PromptGraph } from './PromptGraph';
 import type { Prompt } from '@/types/prompt';
 
-// Helper to render with proper container size for React Flow
+// Create QueryClient for tests
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: { retry: false },
+    mutations: { retry: false },
+  },
+});
+
+// Helper to render with proper container size for React Flow and QueryClient
 function renderWithContainer(ui: React.ReactElement) {
   return render(
-    <div style={{ width: '800px', height: '600px' }}>
-      {ui}
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <div style={{ width: '800px', height: '600px' }}>
+        {ui}
+      </div>
+    </QueryClientProvider>
   );
 }
 
@@ -51,7 +62,7 @@ describe('PromptGraph', () => {
 
   describe('Rendering', () => {
     it('should render the ReactFlow component', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       // ReactFlow renders a div with specific class
       const flowElement = document.querySelector('.react-flow');
@@ -59,7 +70,7 @@ describe('PromptGraph', () => {
     });
 
     it('should render correct number of nodes for all prompts', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       // Each prompt should create a node
       const nodes = document.querySelectorAll('.react-flow__node');
@@ -67,7 +78,7 @@ describe('PromptGraph', () => {
     });
 
     it('should create edges based on parent relationships', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       // prompt-1 -> prompt-2, prompt-2 -> prompt-3 = 2 edges
       // Note: Edge SVG elements may not render fully in jsdom,
@@ -81,35 +92,35 @@ describe('PromptGraph', () => {
     });
 
     it('should display minimap when showMinimap is true', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} showMinimap={true} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} showMinimap={true} />);
 
       const minimap = document.querySelector('.react-flow__minimap');
       expect(minimap).toBeInTheDocument();
     });
 
     it('should not display minimap when showMinimap is false', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} showMinimap={false} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} showMinimap={false} />);
 
       const minimap = document.querySelector('.react-flow__minimap');
       expect(minimap).not.toBeInTheDocument();
     });
 
     it('should display controls when showControls is true', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} showControls={true} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} showControls={true} />);
 
       const controls = document.querySelector('.react-flow__controls');
       expect(controls).toBeInTheDocument();
     });
 
     it('should not display controls when showControls is false', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} showControls={false} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} showControls={false} />);
 
       const controls = document.querySelector('.react-flow__controls');
       expect(controls).not.toBeInTheDocument();
     });
 
     it('should render empty graph when no prompts provided', () => {
-      renderWithContainer(<PromptGraph prompts={[]} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={[]} />);
 
       const nodes = document.querySelectorAll('.react-flow__node');
       expect(nodes.length).toBe(0);
@@ -118,7 +129,7 @@ describe('PromptGraph', () => {
 
   describe('Node Content', () => {
     it('should display prompt ID in each node', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       expect(screen.getByText('prompt-1')).toBeInTheDocument();
       expect(screen.getByText('prompt-2')).toBeInTheDocument();
@@ -126,7 +137,7 @@ describe('PromptGraph', () => {
     });
 
     it('should display truncated content (first 50 characters)', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       // First prompt content is less than 50 chars, should show full
       expect(screen.getByText(/A beautiful mountain landscape/i)).toBeInTheDocument();
@@ -136,7 +147,7 @@ describe('PromptGraph', () => {
     });
 
     it('should display type icon for image prompts', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       // Check for image icons (lucide-react renders SVG with data-testid or aria-label)
       const nodes = document.querySelectorAll('.react-flow__node');
@@ -144,7 +155,7 @@ describe('PromptGraph', () => {
     });
 
     it('should display type icon for video prompts', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       // prompt-3 is a video type
       const nodes = document.querySelectorAll('.react-flow__node');
@@ -157,7 +168,7 @@ describe('PromptGraph', () => {
       const user = userEvent.setup();
       const onPromptSelect = vi.fn();
 
-      renderWithContainer(<PromptGraph prompts={mockPrompts} onPromptSelect={onPromptSelect} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} onPromptSelect={onPromptSelect} />);
 
       // Find the node content area (not the React Flow wrapper which has D3 drag handlers)
       // Look for the button role we added to PromptNode
@@ -170,7 +181,7 @@ describe('PromptGraph', () => {
     });
 
     it('should highlight selected node', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} selectedPromptId="prompt-2" />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} selectedPromptId="prompt-2" />);
 
       const selectedNode = document.querySelector('[data-id="prompt-2"]');
       expect(selectedNode).toBeInTheDocument();
@@ -178,7 +189,7 @@ describe('PromptGraph', () => {
     });
 
     it('should not highlight non-selected nodes', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} selectedPromptId="prompt-2" />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} selectedPromptId="prompt-2" />);
 
       const node1 = document.querySelector('[data-id="prompt-1"]');
       const node3 = document.querySelector('[data-id="prompt-3"]');
@@ -190,7 +201,7 @@ describe('PromptGraph', () => {
 
   describe('Graph Layout', () => {
     it('should arrange nodes hierarchically (top to bottom)', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       const node1 = document.querySelector('[data-id="prompt-1"]');
       const node2 = document.querySelector('[data-id="prompt-2"]');
@@ -218,7 +229,7 @@ describe('PromptGraph', () => {
         },
       ];
 
-      renderWithContainer(<PromptGraph prompts={singlePrompt} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={singlePrompt} />);
 
       const nodes = document.querySelectorAll('.react-flow__node');
       const edges = document.querySelectorAll('.react-flow__edge');
@@ -239,7 +250,7 @@ describe('PromptGraph', () => {
         },
       ];
 
-      renderWithContainer(<PromptGraph prompts={longContentPrompt} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={longContentPrompt} />);
 
       // Should truncate to 50 characters + "..."
       const truncatedContent = screen.queryByText(/A{50}\.\.\./);
@@ -262,7 +273,7 @@ describe('PromptGraph', () => {
         },
       ];
 
-      renderWithContainer(<PromptGraph prompts={promptsWithMissingParent} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={promptsWithMissingParent} />);
 
       // Should still render the node
       const nodes = document.querySelectorAll('.react-flow__node');
@@ -276,14 +287,14 @@ describe('PromptGraph', () => {
 
   describe('Accessibility', () => {
     it('should have proper ARIA labels for the graph', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} />);
 
       const flowElement = document.querySelector('.react-flow');
       expect(flowElement).toBeInTheDocument();
     });
 
     it('should allow keyboard navigation through nodes', () => {
-      renderWithContainer(<PromptGraph prompts={mockPrompts} showControls={true} />);
+      renderWithContainer(<PromptGraph projectId="proj_test" prompts={mockPrompts} showControls={true} />);
 
       // React Flow provides keyboard navigation by default
       const controls = document.querySelector('.react-flow__controls');

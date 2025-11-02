@@ -1,7 +1,15 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 import { Plus } from 'lucide-react';
 import { useProjects, useCreateProject } from '@/hooks';
@@ -66,6 +74,11 @@ export function ProjectList({
   // Create project mutation
   const createProject = useCreateProject();
 
+  // Popover state
+  const [isPopoverOpen, setIsPopoverOpen] = useState(false);
+  const [projectName, setProjectName] = useState('');
+  const [validationError, setValidationError] = useState('');
+
   /**
    * Handle project card click
    */
@@ -87,19 +100,45 @@ export function ProjectList({
    * Handle create new project
    */
   const handleCreateProject = () => {
-    createProject.mutate('New Project', {
+    // Validation
+    setValidationError('');
+
+    if (!projectName.trim()) {
+      setValidationError('Project name is required');
+      return;
+    }
+
+    if (projectName.length > 255) {
+      setValidationError('Project name must be less than 255 characters');
+      return;
+    }
+
+    createProject.mutate(projectName, {
       onSuccess: (result) => {
         if (result.success) {
           // Automatically select the newly created project
           onSelectProject(result.data.id);
+          // Close popover and reset form
+          setIsPopoverOpen(false);
+          setProjectName('');
+          setValidationError('');
         } else {
-          console.error('Failed to create project:', result.error);
+          setValidationError(result.error);
         }
       },
       onError: (error) => {
-        console.error('Failed to create project:', error);
+        setValidationError(error instanceof Error ? error.message : 'Failed to create project');
       },
     });
+  };
+
+  /**
+   * Handle popover cancel
+   */
+  const handleCancel = () => {
+    setIsPopoverOpen(false);
+    setProjectName('');
+    setValidationError('');
   };
 
   // Loading state
@@ -140,18 +179,68 @@ export function ProjectList({
         <h1 className="text-2xl font-bold">Logo</h1>
       </div>
 
-      {/* New Project button - full width */}
-      <Button
-        onClick={handleCreateProject}
-        size="default"
-        variant="default"
-        aria-label={createProject.isPending ? 'Creating Project' : 'New Project'}
-        className="w-full"
-        disabled={createProject.isPending}
-      >
-        <Plus />
-        {createProject.isPending ? 'Creating...' : 'New Project'}
-      </Button>
+      {/* New Project button - full width with popover */}
+      <Popover open={isPopoverOpen} onOpenChange={setIsPopoverOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            size="default"
+            variant="default"
+            aria-label="New Project"
+            className="w-full"
+          >
+            <Plus />
+            New Project
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-80" align="start">
+          <div className="grid gap-4">
+            <div className="space-y-2">
+              <h4 className="font-medium leading-none">Create Project</h4>
+              <p className="text-sm text-muted-foreground">
+                Enter a name for your new project
+              </p>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="project-name">Project Name</Label>
+              <Input
+                id="project-name"
+                placeholder="My New Project"
+                value={projectName}
+                onChange={(e) => setProjectName(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleCreateProject();
+                  } else if (e.key === 'Escape') {
+                    handleCancel();
+                  }
+                }}
+                autoFocus
+              />
+              {validationError && (
+                <p className="text-sm text-destructive" role="alert">
+                  {validationError}
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCancel}
+              >
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={handleCreateProject}
+                disabled={createProject.isPending}
+              >
+                {createProject.isPending ? 'Creating...' : 'Create'}
+              </Button>
+            </div>
+          </div>
+        </PopoverContent>
+      </Popover>
 
       {/* Project list container - scrollable */}
       <div

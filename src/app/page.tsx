@@ -36,6 +36,7 @@ export default function Home() {
         }
         centerPanel={
           <PromptGraph
+            projectId={selectedProjectId || ''}
             prompts={prompts}
             selectedPromptId={selectedPromptId}
             onPromptSelect={setSelectedPromptId}
