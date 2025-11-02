@@ -16,17 +16,24 @@ import {
 } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ImageIcon, VideoIcon, GitBranch, ChevronDown } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { ImageIcon, VideoIcon, GitBranch, ChevronDown, AlertCircle } from "lucide-react";
+import { useUpdatePrompt } from "@/hooks";
 import type { Prompt, PromptDetailProps } from "@/types";
 
-function formatDate(date: Date): string {
+/**
+ * Format a date for display
+ * Handles both Date objects and ISO string dates from API
+ */
+function formatDate(date: Date | string): string {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
   return new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  }).format(date);
+  }).format(dateObj);
 }
 
 export function PromptDetail({
@@ -37,6 +44,27 @@ export function PromptDetail({
 }: PromptDetailProps) {
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(true);
   const [isCommentOpen, setIsCommentOpen] = useState(true);
+  const [feedbackInput, setFeedbackInput] = useState('');
+
+  const updatePrompt = useUpdatePrompt();
+
+  const handleSubmitFeedback = () => {
+    if (!prompt || !feedbackInput.trim()) return;
+
+    updatePrompt.mutate(
+      {
+        promptId: prompt.id,
+        data: { userFeedback: feedbackInput },
+      },
+      {
+        onSuccess: (result) => {
+          if (result.success) {
+            setFeedbackInput('');
+          }
+        },
+      }
+    );
+  };
 
   if (!prompt) {
     return (
@@ -63,7 +91,7 @@ export function PromptDetail({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          {/* User Feedback */}
+          {/* User Feedback - Display existing feedback */}
           {prompt.userFeedback && (
             <Collapsible open={isFeedbackOpen} onOpenChange={setIsFeedbackOpen}>
               <div className="flex items-center justify-between">
@@ -84,6 +112,35 @@ export function PromptDetail({
                 </div>
               </CollapsibleContent>
             </Collapsible>
+          )}
+
+          {/* User Feedback - Form for new feedback */}
+          {!prompt.userFeedback && (
+            <div className="space-y-2">
+              <h4 className="text-sm font-semibold">Add Your Feedback</h4>
+              <Textarea
+                placeholder="Add your feedback..."
+                value={feedbackInput}
+                onChange={(e) => setFeedbackInput(e.target.value)}
+                disabled={updatePrompt.isPending}
+                className="min-h-[100px]"
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={handleSubmitFeedback}
+                  disabled={updatePrompt.isPending || !feedbackInput.trim()}
+                  size="sm"
+                >
+                  {updatePrompt.isPending ? 'Submitting...' : 'Submit Feedback'}
+                </Button>
+                {updatePrompt.isError && (
+                  <div className="flex items-center gap-1 text-sm text-destructive" role="alert">
+                    <AlertCircle className="size-4" />
+                    <span>Failed to submit feedback</span>
+                  </div>
+                )}
+              </div>
+            </div>
           )}
 
           {/* AI Comment */}

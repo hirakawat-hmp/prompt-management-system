@@ -12,8 +12,6 @@ export interface Project {
 }
 
 export interface ProjectListProps {
-  projects: Project[];
   selectedProjectId?: string;
   onSelectProject: (projectId: string) => void;
-  onCreateProject: () => void;
 }

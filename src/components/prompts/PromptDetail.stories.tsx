@@ -1,10 +1,27 @@
 import type { Meta, StoryObj } from '@storybook/react';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { PromptDetail } from './PromptDetail';
 import type { Prompt, Asset } from '@/types';
+
+// Create a query client for stories
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: false,
+    },
+  },
+});
 
 const meta = {
   title: 'Components/Prompts/PromptDetail',
   component: PromptDetail,
+  decorators: [
+    (Story) => (
+      <QueryClientProvider client={queryClient}>
+        <Story />
+      </QueryClientProvider>
+    ),
+  ],
   parameters: {
     layout: 'fullscreen',
     nextjs: {
@@ -201,5 +218,43 @@ The overall mood should be tranquil and inspiring, evoking a sense of wonder and
 export const NoPromptSelected: Story = {
   args: {
     prompt: null,
+  },
+};
+
+export const WithUserFeedback: Story = {
+  args: {
+    prompt: {
+      ...basePrompt,
+      userFeedback: 'The mountains look great, but the sunset colors could be more vibrant. Also, the river could be wider.',
+    },
+  },
+};
+
+export const WithAIComment: Story = {
+  args: {
+    prompt: {
+      ...basePrompt,
+      aiComment: 'Based on your feedback, I suggest adjusting the color saturation for the sunset and increasing the river width by 30%. This will create a more balanced composition.',
+    },
+  },
+};
+
+export const WithFeedbackAndComment: Story = {
+  args: {
+    prompt: {
+      ...basePrompt,
+      userFeedback: 'The mountains look great, but the sunset colors could be more vibrant.',
+      aiComment: 'I will increase the saturation in the sunset area and add warmer tones to make it more vibrant.',
+    },
+  },
+};
+
+export const VideoPrompt: Story = {
+  args: {
+    prompt: {
+      ...basePrompt,
+      type: 'video',
+      content: 'Create a video of a sunrise over mountains with birds flying across the sky.',
+    },
   },
 };

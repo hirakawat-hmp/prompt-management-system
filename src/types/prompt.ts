@@ -6,16 +6,18 @@ import type { Asset } from './asset';
 
 export interface Prompt {
   id: string;
+  projectId: string;
   type: "image" | "video";
   content: string;
   userFeedback?: string;
   aiComment?: string;
-  createdAt: Date;
-  updatedAt: Date;
+  parentId?: string;
   parent?: {
     id: string;
     content: string;
   };
+  createdAt: Date;
+  updatedAt: Date;
   assets: Asset[];
 }
 

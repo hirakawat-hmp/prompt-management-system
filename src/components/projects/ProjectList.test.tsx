@@ -1,8 +1,16 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
 import { userEvent } from '@testing-library/user-event';
 import { ProjectList } from './ProjectList';
+import * as hooks from '@/hooks';
+import type { UseQueryResult, UseMutationResult } from '@tanstack/react-query';
 import type { Project } from './types';
+
+// Mock the hooks module
+vi.mock('@/hooks', () => ({
+  useProjects: vi.fn(),
+  useCreateProject: vi.fn(),
+}));
 
 describe('ProjectList', () => {
   const mockProjects: Project[] = [
@@ -32,243 +40,317 @@ describe('ProjectList', () => {
     },
   ];
 
-  it('should render all projects', () => {
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
-
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
-
-    // All project names should be visible
-    expect(screen.getByText('Test Project 1')).toBeInTheDocument();
-    expect(screen.getByText('Test Project 2')).toBeInTheDocument();
-    expect(screen.getByText('Test Project 3')).toBeInTheDocument();
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
-  it('should display project metadata (created date and prompt count)', () => {
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+  describe('Loading State', () => {
+    it('should show loading state while fetching projects', () => {
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: undefined,
+        isLoading: true,
+        error: null,
+        isSuccess: false,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
 
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+      vi.mocked(hooks.useCreateProject).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      } as unknown as UseMutationResult);
 
-    // Check for prompt counts
-    expect(screen.getByText(/5.*prompts?/i)).toBeInTheDocument();
-    expect(screen.getByText(/3.*prompts?/i)).toBeInTheDocument();
-    expect(screen.getByText(/0.*prompts?/i)).toBeInTheDocument();
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={vi.fn()} />);
+
+      expect(screen.getByText(/loading/i)).toBeInTheDocument();
+    });
   });
 
-  it('should call onSelectProject when a project card is clicked', async () => {
-    const user = userEvent.setup();
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+  describe('Error State', () => {
+    it('should display error message when fetch fails', () => {
+      const errorMessage = 'Network error occurred';
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        error: new Error(errorMessage),
+        isSuccess: false,
+        isError: true,
+      } as UseQueryResult<Project[], Error>);
 
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+      vi.mocked(hooks.useCreateProject).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      } as unknown as UseMutationResult);
 
-    // Click the first project
-    const projectCard = screen.getByText('Test Project 1').closest('[role="button"]');
-    expect(projectCard).toBeInTheDocument();
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={vi.fn()} />);
 
-    if (projectCard) {
-      await user.click(projectCard);
-      expect(onSelectProject).toHaveBeenCalledWith('1');
-    }
+      // Check for error heading
+      expect(screen.getByText('Failed to fetch projects')).toBeInTheDocument();
+      // Check for specific error message
+      expect(screen.getByText(errorMessage)).toBeInTheDocument();
+    });
   });
 
-  it('should highlight selected project with primary border', () => {
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+  describe('Empty State', () => {
+    it('should display empty state when no projects exist', () => {
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: [],
+        isLoading: false,
+        error: null,
+        isSuccess: true,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
 
-    render(
-      <ProjectList
-        projects={mockProjects}
-        selectedProjectId="2"
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+      vi.mocked(hooks.useCreateProject).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      } as unknown as UseMutationResult);
 
-    const selectedCard = screen.getByText('Test Project 2').closest('[role="button"]');
-    expect(selectedCard).toHaveClass('border-primary');
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={vi.fn()} />);
+
+      // Empty state message should be visible
+      expect(screen.getByText(/no projects/i)).toBeInTheDocument();
+
+      // New Project button should still be visible
+      expect(screen.getByRole('button', { name: /new project/i })).toBeInTheDocument();
+    });
   });
 
-  it('should render the "New Project" button', () => {
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+  describe('Success State', () => {
+    beforeEach(() => {
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: mockProjects,
+        isLoading: false,
+        error: null,
+        isSuccess: true,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
 
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+      vi.mocked(hooks.useCreateProject).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: false,
+      } as unknown as UseMutationResult);
+    });
 
-    const newButton = screen.getByRole('button', { name: /new project/i });
-    expect(newButton).toBeInTheDocument();
+    it('should render all projects from API', () => {
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      // All project names should be visible
+      expect(screen.getByText('Test Project 1')).toBeInTheDocument();
+      expect(screen.getByText('Test Project 2')).toBeInTheDocument();
+      expect(screen.getByText('Test Project 3')).toBeInTheDocument();
+    });
+
+    it('should display project metadata (created date and prompt count)', () => {
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      // Check for prompt counts
+      expect(screen.getByText(/5.*prompts?/i)).toBeInTheDocument();
+      expect(screen.getByText(/3.*prompts?/i)).toBeInTheDocument();
+      expect(screen.getByText(/0.*prompts?/i)).toBeInTheDocument();
+    });
+
+    it('should call onSelectProject when a project card is clicked', async () => {
+      const user = userEvent.setup();
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      // Click the first project
+      const projectCard = screen.getByText('Test Project 1').closest('[role="button"]');
+      expect(projectCard).toBeInTheDocument();
+
+      if (projectCard) {
+        await user.click(projectCard);
+        expect(onSelectProject).toHaveBeenCalledWith('1');
+      }
+    });
+
+    it('should highlight selected project with primary border', () => {
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId="2" onSelectProject={onSelectProject} />);
+
+      const selectedCard = screen.getByText('Test Project 2').closest('[role="button"]');
+      expect(selectedCard).toHaveClass('border-primary');
+    });
+
+    it('should render the "New Project" button', () => {
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      const newButton = screen.getByRole('button', { name: /new project/i });
+      expect(newButton).toBeInTheDocument();
+    });
+
+    it('should be scrollable with many projects', () => {
+      const manyProjects = Array.from({ length: 20 }, (_, i) => ({
+        id: `${i + 1}`,
+        name: `Project ${i + 1}`,
+        createdAt: new Date(`2025-01-${(i % 28) + 1}`),
+        _count: {
+          prompts: i,
+        },
+      }));
+
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: manyProjects,
+        isLoading: false,
+        error: null,
+        isSuccess: true,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
+
+      const onSelectProject = vi.fn();
+
+      const { container } = render(
+        <ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />
+      );
+
+      // Container should have overflow styles
+      const listContainer = container.querySelector('[data-testid="project-list-container"]');
+      expect(listContainer).toHaveClass('overflow-y-auto');
+    });
+
+    it('should apply hover effect on project cards', () => {
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      const projectCard = screen.getByText('Test Project 1').closest('[role="button"]');
+      expect(projectCard).toHaveClass('hover:border-primary/50');
+    });
+
+    it('should handle projects without prompt counts gracefully', () => {
+      const projectsWithoutCounts = [
+        {
+          id: '1',
+          name: 'Project Without Counts',
+          createdAt: new Date('2025-01-01'),
+        },
+      ];
+
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: projectsWithoutCounts,
+        isLoading: false,
+        error: null,
+        isSuccess: true,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
+
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      expect(screen.getByText('Project Without Counts')).toBeInTheDocument();
+      // Should show 0 prompts when _count is missing
+      expect(screen.getByText(/0.*prompts?/i)).toBeInTheDocument();
+    });
+
+    it('should format dates in a readable format', () => {
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      // Should display formatted dates (not raw Date objects)
+      // Looking for any date-like text pattern
+      const dateElements = screen.getAllByText(/\d{4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/i);
+      expect(dateElements.length).toBeGreaterThan(0);
+    });
+
+    it('should have proper keyboard accessibility', async () => {
+      const user = userEvent.setup();
+      const onSelectProject = vi.fn();
+
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
+
+      const projectCard = screen.getByText('Test Project 1').closest('[role="button"]') as HTMLElement;
+
+      if (projectCard) {
+        // Focus the card
+        projectCard.focus();
+        expect(projectCard).toHaveFocus();
+
+        // Press Enter
+        await user.keyboard('{Enter}');
+        expect(onSelectProject).toHaveBeenCalledWith('1');
+      }
+    });
   });
 
-  it('should call onCreateProject when "New Project" button is clicked', async () => {
-    const user = userEvent.setup();
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+  describe('Create Project', () => {
+    it('should call createProject mutation when "New Project" button is clicked', async () => {
+      const user = userEvent.setup();
+      const mutateFn = vi.fn();
 
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: mockProjects,
+        isLoading: false,
+        error: null,
+        isSuccess: true,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
 
-    const newButton = screen.getByRole('button', { name: /new project/i });
-    await user.click(newButton);
-    expect(onCreateProject).toHaveBeenCalledOnce();
-  });
+      vi.mocked(hooks.useCreateProject).mockReturnValue({
+        mutate: mutateFn,
+        isPending: false,
+      } as unknown as UseMutationResult);
 
-  it('should display empty state when no projects exist', () => {
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+      const onSelectProject = vi.fn();
 
-    render(
-      <ProjectList
-        projects={[]}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
 
-    // Empty state message should be visible
-    expect(screen.getByText(/no projects/i)).toBeInTheDocument();
+      const newButton = screen.getByRole('button', { name: /new project/i });
+      await user.click(newButton);
 
-    // New Project button should still be visible
-    expect(screen.getByRole('button', { name: /new project/i })).toBeInTheDocument();
-  });
+      expect(mutateFn).toHaveBeenCalledOnce();
+    });
 
-  it('should be scrollable with many projects', () => {
-    const manyProjects = Array.from({ length: 20 }, (_, i) => ({
-      id: `${i + 1}`,
-      name: `Project ${i + 1}`,
-      createdAt: new Date(`2025-01-${(i % 28) + 1}`),
-      _count: {
-        prompts: i,
-      },
-    }));
+    it('should disable "New Project" button while creating', () => {
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: mockProjects,
+        isLoading: false,
+        error: null,
+        isSuccess: true,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
 
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+      vi.mocked(hooks.useCreateProject).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: true,
+      } as unknown as UseMutationResult);
 
-    const { container } = render(
-      <ProjectList
-        projects={manyProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+      const onSelectProject = vi.fn();
 
-    // Container should have overflow styles
-    const listContainer = container.querySelector('[data-testid="project-list-container"]');
-    expect(listContainer).toHaveClass('overflow-y-auto');
-  });
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
 
-  it('should apply hover effect on project cards', () => {
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+      const newButton = screen.getByRole('button', { name: /creating/i });
+      expect(newButton).toBeDisabled();
+    });
 
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
+    it('should show "Creating..." text while project is being created', () => {
+      vi.mocked(hooks.useProjects).mockReturnValue({
+        data: mockProjects,
+        isLoading: false,
+        error: null,
+        isSuccess: true,
+        isError: false,
+      } as UseQueryResult<Project[], Error>);
 
-    const projectCard = screen.getByText('Test Project 1').closest('[role="button"]');
-    expect(projectCard).toHaveClass('hover:border-primary/50');
-  });
+      vi.mocked(hooks.useCreateProject).mockReturnValue({
+        mutate: vi.fn(),
+        isPending: true,
+      } as unknown as UseMutationResult);
 
-  it('should handle projects without prompt counts gracefully', () => {
-    const projectsWithoutCounts = [
-      {
-        id: '1',
-        name: 'Project Without Counts',
-        createdAt: new Date('2025-01-01'),
-      },
-    ];
+      const onSelectProject = vi.fn();
 
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
+      render(<ProjectList selectedProjectId={undefined} onSelectProject={onSelectProject} />);
 
-    render(
-      <ProjectList
-        projects={projectsWithoutCounts}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
-
-    expect(screen.getByText('Project Without Counts')).toBeInTheDocument();
-    // Should show 0 prompts when _count is missing
-    expect(screen.getByText(/0.*prompts?/i)).toBeInTheDocument();
-  });
-
-  it('should format dates in a readable format', () => {
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
-
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
-
-    // Should display formatted dates (not raw Date objects)
-    // Looking for any date-like text pattern
-    const dateElements = screen.getAllByText(/\d{4}|Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec/i);
-    expect(dateElements.length).toBeGreaterThan(0);
-  });
-
-  it('should have proper keyboard accessibility', async () => {
-    const user = userEvent.setup();
-    const onSelectProject = vi.fn();
-    const onCreateProject = vi.fn();
-
-    render(
-      <ProjectList
-        projects={mockProjects}
-        onSelectProject={onSelectProject}
-        onCreateProject={onCreateProject}
-      />
-    );
-
-    const projectCard = screen.getByText('Test Project 1').closest('[role="button"]') as HTMLElement;
-
-    if (projectCard) {
-      // Focus the card
-      projectCard.focus();
-      expect(projectCard).toHaveFocus();
-
-      // Press Enter
-      await user.keyboard('{Enter}');
-      expect(onSelectProject).toHaveBeenCalledWith('1');
-    }
+      expect(screen.getByText(/creating/i)).toBeInTheDocument();
+    });
   });
 });
