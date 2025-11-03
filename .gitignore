@@ -52,3 +52,6 @@ mastra.db
 prisma/mastra.db
 *.db-shm
 *.db-wal
+
+# Storage (generated assets)
+/storage

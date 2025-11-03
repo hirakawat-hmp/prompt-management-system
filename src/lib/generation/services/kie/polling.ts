@@ -294,14 +294,57 @@ export async function startPolling(
         const resultUrls = extractResultUrls(data);
         const resultJson = data.resultJson || JSON.stringify({ resultUrls });
 
-        await prisma.generationTask.update({
+        // 1. Update GenerationTask and fetch associated prompt
+        const task = await prisma.generationTask.update({
           where: { id: taskId },
           data: {
             status: 'SUCCESS',
             resultJson,
             completedAt: new Date(),
           },
+          include: { prompt: true },
         });
+
+        console.log(`[Polling:${model}] Task ${taskId} - Downloading ${resultUrls.length} assets...`);
+
+        // 2. Download and save each asset locally
+        const { downloadAndSaveAsset } = await import('@/lib/generation/storage');
+        const assetType = task.prompt.type; // IMAGE or VIDEO
+        const provider = getProviderFromModel(model);
+
+        for (let i = 0; i < resultUrls.length; i++) {
+          const sourceUrl = resultUrls[i];
+
+          try {
+            // Download and save to local storage
+            const downloadResult = await downloadAndSaveAsset({
+              sourceUrl,
+              taskId,
+              index: i,
+              assetType,
+            });
+
+            // 3. Create Asset record in database
+            await prisma.asset.create({
+              data: {
+                promptId: task.promptId,
+                generationTaskId: task.id,
+                type: assetType,
+                url: downloadResult.apiUrl, // e.g., "/api/assets/images/task123_0.jpg"
+                provider,
+                fileSize: downloadResult.fileSize,
+                mimeType: downloadResult.mimeType,
+              },
+            });
+
+            console.log(`[Polling:${model}] Asset ${i + 1}/${resultUrls.length} saved: ${downloadResult.apiUrl}`);
+          } catch (assetError) {
+            console.error(`[Polling:${model}] Failed to save asset ${i}:`, assetError);
+            // Continue with next asset instead of failing entire task
+          }
+        }
+
+        console.log(`[Polling:${model}] Task ${taskId} completed with ${resultUrls.length} assets`);
         return;
       } catch (error) {
         throw new Error(
@@ -353,4 +396,23 @@ function getApiPathForModel(model: GenerationModel): string {
     default:
       throw new Error(`Unsupported model for polling: ${model}`);
   }
+}
+
+/**
+ * Maps GenerationModel to AssetProvider
+ *
+ * Determines which provider to attribute the asset to based on generation model:
+ * - MIDJOURNEY → MIDJOURNEY provider
+ * - VEO3 → VEO provider
+ * - IMAGEN4, SORA2 → MIDJOURNEY (default, as they use Kie.ai's infrastructure)
+ *
+ * @param model Generation model type
+ * @returns Asset provider enum value
+ */
+function getProviderFromModel(model: GenerationModel): 'MIDJOURNEY' | 'VEO' {
+  if (model === 'VEO3') {
+    return 'VEO';
+  }
+  // MIDJOURNEY, IMAGEN4, SORA2 all use MIDJOURNEY provider
+  return 'MIDJOURNEY';
 }
