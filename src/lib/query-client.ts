@@ -63,4 +63,9 @@ export const queryKeys = {
     byProject: (projectId: string) => ['prompts', projectId] as const,
     detail: (id: string) => ['prompts', id] as const,
   },
+  generationTasks: {
+    all: ['generation-tasks'] as const,
+    byPrompt: (promptId: string) => ['generation-tasks', promptId] as const,
+    detail: (id: string) => ['generation-tasks', id] as const,
+  },
 } as const;

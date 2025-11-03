@@ -3,6 +3,13 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -20,6 +27,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { ImageIcon, VideoIcon, GitBranch, ChevronDown, AlertCircle } from "lucide-react";
 import { useUpdatePrompt } from "@/hooks";
 import type { Prompt, PromptDetailProps } from "@/types";
+import {
+  Imagen4GenerationModal,
+  Veo3GenerationModal,
+  MidjourneyGenerationModal,
+  Sora2GenerationModal,
+} from "@/components/generation/modals";
 
 /**
  * Format a date for display
@@ -45,6 +58,12 @@ export function PromptDetail({
   const [isFeedbackOpen, setIsFeedbackOpen] = useState(true);
   const [isCommentOpen, setIsCommentOpen] = useState(true);
   const [feedbackInput, setFeedbackInput] = useState('');
+
+  // Generation modal state
+  const [imageModalOpen, setImageModalOpen] = useState(false);
+  const [videoModalOpen, setVideoModalOpen] = useState(false);
+  const [imageModel, setImageModel] = useState<'MIDJOURNEY' | 'IMAGEN4'>('MIDJOURNEY');
+  const [videoModel, setVideoModel] = useState<'VEO3' | 'SORA2'>('VEO3');
 
   const updatePrompt = useUpdatePrompt();
 
@@ -201,16 +220,38 @@ export function PromptDetail({
         <CardContent>
           <div className="flex flex-wrap gap-3">
             {prompt.type === "image" && (
-              <Button onClick={onGenerateImage} variant="default">
-                <ImageIcon />
-                Generate Image
-              </Button>
+              <div className="flex gap-2 items-center">
+                <Select value={imageModel} onValueChange={(value: 'MIDJOURNEY' | 'IMAGEN4') => setImageModel(value)}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="MIDJOURNEY">Midjourney</SelectItem>
+                    <SelectItem value="IMAGEN4">Imagen4</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => setImageModalOpen(true)} variant="default">
+                  <ImageIcon />
+                  Generate Image
+                </Button>
+              </div>
             )}
             {prompt.type === "video" && (
-              <Button onClick={onGenerateVideo} variant="default">
-                <VideoIcon />
-                Generate Video
-              </Button>
+              <div className="flex gap-2 items-center">
+                <Select value={videoModel} onValueChange={(value: 'VEO3' | 'SORA2') => setVideoModel(value)}>
+                  <SelectTrigger className="w-[150px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="VEO3">Veo3</SelectItem>
+                    <SelectItem value="SORA2">Sora2</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button onClick={() => setVideoModalOpen(true)} variant="default">
+                  <VideoIcon />
+                  Generate Video
+                </Button>
+              </div>
             )}
             <Button onClick={onCreateDerivative} variant="secondary">
               <GitBranch />
@@ -257,6 +298,56 @@ export function PromptDetail({
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Generation Modals */}
+      {imageModel === 'MIDJOURNEY' && (
+        <MidjourneyGenerationModal
+          open={imageModalOpen}
+          onOpenChange={setImageModalOpen}
+          promptId={prompt.id}
+          promptContent={prompt.content}
+          onSuccess={() => {
+            setImageModalOpen(false);
+            // Optionally show success notification
+          }}
+        />
+      )}
+
+      {imageModel === 'IMAGEN4' && (
+        <Imagen4GenerationModal
+          open={imageModalOpen}
+          onOpenChange={setImageModalOpen}
+          promptId={prompt.id}
+          promptContent={prompt.content}
+          onSuccess={() => {
+            setImageModalOpen(false);
+          }}
+        />
+      )}
+
+      {videoModel === 'VEO3' && (
+        <Veo3GenerationModal
+          open={videoModalOpen}
+          onOpenChange={setVideoModalOpen}
+          promptId={prompt.id}
+          promptContent={prompt.content}
+          onSuccess={() => {
+            setVideoModalOpen(false);
+          }}
+        />
+      )}
+
+      {videoModel === 'SORA2' && (
+        <Sora2GenerationModal
+          open={videoModalOpen}
+          onOpenChange={setVideoModalOpen}
+          promptId={prompt.id}
+          promptContent={prompt.content}
+          onSuccess={() => {
+            setVideoModalOpen(false);
+          }}
+        />
       )}
     </div>
   );

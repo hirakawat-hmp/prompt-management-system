@@ -5,8 +5,9 @@
 
 import { memo, useState } from 'react';
 import { Handle, Position, NodeToolbar } from '@xyflow/react';
-import { Image, Video } from 'lucide-react';
+import { Image, Video, CheckCircle2, XCircle, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useGenerationTasks } from '@/hooks/use-generation-tasks';
 
 const PromptNode = memo(function PromptNode({
   data,
@@ -14,6 +15,10 @@ const PromptNode = memo(function PromptNode({
 }: any) {
   const { prompt, onSelect } = data;
   const [isHovered, setIsHovered] = useState(false);
+
+  // Fetch generation tasks for this prompt
+  const { data: tasks = [] } = useGenerationTasks(prompt.id);
+  const latestTask = tasks[0]; // Most recent task
 
   const handleClick = () => {
     if (onSelect) {
@@ -141,6 +146,36 @@ const PromptNode = memo(function PromptNode({
         <Image className={cn('h-6 w-6', colors.icon)} aria-label="Image prompt" />
       ) : (
         <Video className={cn('h-6 w-6', colors.icon)} aria-label="Video prompt" />
+      )}
+
+      {/* Generation Status Badge */}
+      {latestTask && (
+        <div
+          className="absolute -top-1 -right-1"
+          style={{ pointerEvents: 'none' }}
+        >
+          {latestTask.status === 'PENDING' && (
+            <div className="relative">
+              <Loader2
+                className="h-4 w-4 text-orange-500 animate-spin"
+                aria-label="Generating"
+              />
+              <div className="absolute inset-0 bg-orange-500/20 rounded-full animate-pulse" />
+            </div>
+          )}
+          {latestTask.status === 'SUCCESS' && (
+            <CheckCircle2
+              className="h-4 w-4 text-green-500"
+              aria-label="Generation successful"
+            />
+          )}
+          {latestTask.status === 'FAILED' && (
+            <XCircle
+              className="h-4 w-4 text-red-500"
+              aria-label="Generation failed"
+            />
+          )}
+        </div>
       )}
 
       {/* Output handle (bottom) */}

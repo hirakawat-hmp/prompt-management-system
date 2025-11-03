@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,39 +7,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// ============================================
-// Application Models
-// ============================================
-// These tables coexist with Mastra's internal tables
-// (mastra_messages, mastra_threads, etc.) in the same DB
-
 model Project {
-  id               String    @id @default(cuid())
-  name             String
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  prompts          Prompt[]
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  prompts   Prompt[]
 
   @@map("projects")
 }
 
 model Prompt {
-  id               String    @id @default(cuid())
-  projectId        String
-  type             PromptType
-  content          String
-  userFeedback     String?
-  aiComment        String?
-  mastraMessageId  String?   @unique  // Reference to Mastra message ID
-  parentId         String?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
-
-  project          Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  parent           Prompt?   @relation("PromptHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  children         Prompt[]  @relation("PromptHierarchy")
-  assets           Asset[]
+  id              String           @id @default(cuid())
+  projectId       String
+  type            PromptType
+  content         String
+  userFeedback    String?
+  aiComment       String?
+  mastraMessageId String?          @unique
+  parentId        String?
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  assets          Asset[]
+  generationTasks GenerationTask[] // Track all generation attempts
+  parent          Prompt?          @relation("PromptHierarchy", fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  children        Prompt[]         @relation("PromptHierarchy")
+  project         Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([projectId])
   @@index([parentId])
@@ -51,27 +41,175 @@ model Prompt {
 }
 
 model Asset {
-  id               String    @id @default(cuid())
+  id               String          @id @default(cuid())
   promptId         String
   type             AssetType
   url              String
   provider         AssetProvider
   width            Int?
   height           Int?
-  duration         Int?      // seconds
-  fileSize         Int?      // bytes
+  duration         Int?
+  fileSize         Int?
   mimeType         String?
-  createdAt        DateTime  @default(now())
-
-  prompt           Prompt    @relation(fields: [promptId], references: [id], onDelete: Cascade)
+  createdAt        DateTime        @default(now())
+  generationTaskId String?
+  generationTask   GenerationTask? @relation(fields: [generationTaskId], references: [id], onDelete: SetNull)
+  prompt           Prompt          @relation(fields: [promptId], references: [id], onDelete: Cascade)
 
   @@index([promptId])
+  @@index([generationTaskId])
   @@map("assets")
 }
 
-// ============================================
-// Enums
-// ============================================
+model GenerationTask {
+  id             String            @id @default(cuid())
+  promptId       String
+  service        GenerationService
+  model          GenerationModel
+  externalTaskId String?
+  status         TaskStatus
+  providerParams String            @default("{}")
+  resultJson     String?
+  failCode       String?
+  failMsg        String?
+  createdAt      DateTime          @default(now())
+  completedAt    DateTime?
+  assets         Asset[]
+  prompt         Prompt            @relation(fields: [promptId], references: [id], onDelete: Cascade)
+
+  @@index([promptId])
+  @@index([service, model])
+  @@index([externalTaskId])
+  @@index([status])
+  @@map("generation_tasks")
+}
+
+model mastra_ai_spans {
+  traceId      String
+  spanId       String
+  parentSpanId String?
+  name         String
+  scope        Json?
+  spanType     String
+  attributes   Json?
+  metadata     Json?
+  links        Json?
+  input        Json?
+  output       Json?
+  error        Json?
+  startedAt    String
+  endedAt      String?
+  createdAt    String
+  updatedAt    String?
+  isEvent      Boolean
+
+  @@id([traceId, spanId])
+}
+
+/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
+model mastra_evals {
+  input         String
+  output        String
+  result        Json
+  agent_name    String
+  metric_name   String
+  instructions  String
+  test_info     Json?
+  global_run_id String
+  run_id        String
+  created_at    String
+  createdAt     String?
+
+  @@ignore
+}
+
+model mastra_messages {
+  id         String  @id
+  thread_id  String
+  content    String
+  role       String
+  type       String
+  createdAt  String
+  resourceId String?
+}
+
+model mastra_resources {
+  id            String  @id
+  workingMemory String?
+  metadata      Json?
+  createdAt     String
+  updatedAt     String
+}
+
+model mastra_scorers {
+  id                   String  @id
+  scorerId             String
+  traceId              String?
+  spanId               String?
+  runId                String
+  scorer               Json
+  preprocessStepResult Json?
+  extractStepResult    Json?
+  analyzeStepResult    Json?
+  score                Float
+  reason               String?
+  metadata             Json?
+  preprocessPrompt     String?
+  extractPrompt        String?
+  generateScorePrompt  String?
+  generateReasonPrompt String?
+  analyzePrompt        String?
+  reasonPrompt         String?
+  input                Json
+  output               Json
+  additionalContext    Json?
+  runtimeContext       Json?
+  entityType           String?
+  entity               Json?
+  entityId             String?
+  source               String
+  resourceId           String?
+  threadId             String?
+  createdAt            String
+  updatedAt            String
+}
+
+model mastra_threads {
+  id         String  @id
+  resourceId String
+  title      String
+  metadata   String?
+  createdAt  String
+  updatedAt  String
+}
+
+model mastra_traces {
+  id           String  @id
+  parentSpanId String?
+  name         String
+  traceId      String
+  scope        String
+  kind         Int
+  attributes   Json?
+  status       Json?
+  events       Json?
+  links        Json?
+  other        String?
+  startTime    BigInt
+  endTime      BigInt
+  createdAt    String
+}
+
+model mastra_workflow_snapshot {
+  workflow_name String
+  run_id        String
+  resourceId    String?
+  snapshot      String
+  createdAt     String
+  updatedAt     String
+
+  @@id([workflow_name, run_id])
+}
 
 enum PromptType {
   IMAGE
@@ -86,4 +224,27 @@ enum AssetType {
 enum AssetProvider {
   MIDJOURNEY
   VEO
+}
+
+enum GenerationService {
+  KIE
+  GOOGLE
+  AZURE
+  OPENAI
+}
+
+enum GenerationModel {
+  IMAGEN4
+  MIDJOURNEY
+  DALL_E_3
+  VEO3
+  SORA2
+  GEMINI_2_0
+  GPT_4O
+}
+
+enum TaskStatus {
+  PENDING
+  SUCCESS
+  FAILED
 }
