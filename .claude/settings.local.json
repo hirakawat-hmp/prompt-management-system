@@ -9,6 +9,7 @@
       "Bash(npm run test:*)",
       "Bash(tree:*)",
       "Bash(sqlite3:*)",
+      "Bash(mkdir:*)",
       "WebSearch",
       "WebFetch",
       "mcp__serena",
@@ -19,7 +20,5 @@
     "ask": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledMcpjsonServers": [
-    "serena"
-  ]
+  "enabledMcpjsonServers": ["context7"]
 }
