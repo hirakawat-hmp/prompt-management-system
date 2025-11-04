@@ -2,7 +2,7 @@
  * GenerationTaskDashboard component
  *
  * Displays all generation tasks across all prompts in a project.
- * Provides filtering by service, model, and status.
+ * Provides filtering by service, model, and status in a compact table format.
  */
 
 'use client';
@@ -15,6 +15,14 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import {
   Select,
   SelectContent,
@@ -49,77 +57,31 @@ function formatDate(date: Date | string): string {
 }
 
 /**
- * Single task card component
+ * Get status icon component
  */
-function TaskCard({
-  task,
-  promptContent,
-  onPromptClick,
-}: {
-  task: GenerationTask & { prompt?: { id: string; content: string } };
-  promptContent: string;
-  onPromptClick?: () => void;
-}) {
-  const statusIcon = {
-    PENDING: <Loader2 className="h-4 w-4 text-orange-500 animate-spin" />,
-    SUCCESS: <CheckCircle2 className="h-4 w-4 text-green-500" />,
-    FAILED: <XCircle className="h-4 w-4 text-red-500" />,
-  }[task.status];
+function getStatusIcon(status: GenerationTask['status']) {
+  switch (status) {
+    case 'PENDING':
+      return <Loader2 className="h-3.5 w-3.5 text-orange-500 animate-spin" />;
+    case 'SUCCESS':
+      return <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />;
+    case 'FAILED':
+      return <XCircle className="h-3.5 w-3.5 text-red-500" />;
+  }
+}
 
-  const statusColor = {
-    PENDING: 'bg-orange-500/10 text-orange-500 border-orange-500/20',
-    SUCCESS: 'bg-green-500/10 text-green-500 border-green-500/20',
-    FAILED: 'bg-red-500/10 text-red-500 border-red-500/20',
-  }[task.status];
-
-  return (
-    <Card className="hover:bg-muted/50 transition-colors">
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-2">
-            {statusIcon}
-            <div>
-              <CardTitle className="text-sm font-medium">
-                {task.service} • {task.model}
-              </CardTitle>
-              <CardDescription className="text-xs mt-1">
-                {formatDate(task.createdAt)}
-              </CardDescription>
-            </div>
-          </div>
-          <Badge variant="outline" className={cn('text-xs', statusColor)}>
-            {task.status}
-          </Badge>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        {/* Prompt preview */}
-        <div className="text-xs text-muted-foreground line-clamp-2">
-          {promptContent}
-        </div>
-
-        {/* Error message if failed */}
-        {task.status === 'FAILED' && task.failMsg && (
-          <div className="text-xs text-red-500 bg-red-500/5 border border-red-500/20 rounded p-2">
-            <span className="font-semibold">Error:</span> {task.failMsg}
-          </div>
-        )}
-
-        {/* Link to prompt */}
-        {onPromptClick && (
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-auto p-1 text-xs"
-            onClick={onPromptClick}
-          >
-            <ExternalLink className="h-3 w-3 mr-1" />
-            View Prompt
-          </Button>
-        )}
-      </CardContent>
-    </Card>
-  );
+/**
+ * Get status badge color classes
+ */
+function getStatusColor(status: GenerationTask['status']) {
+  switch (status) {
+    case 'PENDING':
+      return 'bg-orange-500/10 text-orange-500 border-orange-500/20';
+    case 'SUCCESS':
+      return 'bg-green-500/10 text-green-500 border-green-500/20';
+    case 'FAILED':
+      return 'bg-red-500/10 text-red-500 border-red-500/20';
+  }
 }
 
 /**
@@ -212,26 +174,39 @@ export function GenerationTaskDashboard({
         </CardHeader>
 
         <CardContent>
-          {/* Prompt-based task list */}
-          <div className="space-y-6">
-            {prompts.length === 0 ? (
-              <div className="text-center text-muted-foreground py-8">
-                No prompts in this project yet
-              </div>
-            ) : (
-              prompts.map((prompt) => (
-                <PromptTaskSection
-                  key={prompt.id}
-                  promptId={prompt.id}
-                  promptContent={prompt.content}
-                  serviceFilter={serviceFilter}
-                  modelFilter={modelFilter}
-                  statusFilter={statusFilter}
-                  onPromptSelect={onPromptSelect}
-                />
-              ))
-            )}
-          </div>
+          {prompts.length === 0 ? (
+            <div className="text-center text-muted-foreground py-8">
+              No prompts in this project yet
+            </div>
+          ) : (
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[100px]">Status</TableHead>
+                    <TableHead>Model</TableHead>
+                    <TableHead>Service</TableHead>
+                    <TableHead>Created</TableHead>
+                    <TableHead className="max-w-[300px]">Prompt</TableHead>
+                    <TableHead className="text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {prompts.map((prompt) => (
+                    <PromptTaskSection
+                      key={prompt.id}
+                      promptId={prompt.id}
+                      promptContent={prompt.content}
+                      serviceFilter={serviceFilter}
+                      modelFilter={modelFilter}
+                      statusFilter={statusFilter}
+                      onPromptSelect={onPromptSelect}
+                    />
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -239,7 +214,7 @@ export function GenerationTaskDashboard({
 }
 
 /**
- * Section showing tasks for a single prompt
+ * Section showing tasks for a single prompt in table format
  */
 function PromptTaskSection({
   promptId,
@@ -272,23 +247,59 @@ function PromptTaskSection({
   if (filteredTasks.length === 0) return null;
 
   return (
-    <div className="space-y-2">
-      <h3 className="text-sm font-semibold text-muted-foreground">
-        Prompt: {promptContent.slice(0, 60)}
-        {promptContent.length > 60 && '...'}
-      </h3>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {filteredTasks.map((task) => (
-          <TaskCard
-            key={task.id}
-            task={task}
-            promptContent={promptContent}
-            onPromptClick={
-              onPromptSelect ? () => onPromptSelect(promptId) : undefined
-            }
-          />
-        ))}
-      </div>
-    </div>
+    <>
+      {filteredTasks.map((task) => (
+        <TableRow key={task.id} className="hover:bg-muted/50">
+          {/* Status Icon + Badge */}
+          <TableCell className="w-[100px]">
+            <div className="flex items-center gap-2">
+              {getStatusIcon(task.status)}
+              <Badge variant="outline" className={cn('text-xs', getStatusColor(task.status))}>
+                {task.status}
+              </Badge>
+            </div>
+          </TableCell>
+
+          {/* Model */}
+          <TableCell className="font-medium">{task.model}</TableCell>
+
+          {/* Service */}
+          <TableCell className="text-muted-foreground">{task.service}</TableCell>
+
+          {/* Created Date */}
+          <TableCell className="text-muted-foreground whitespace-nowrap">
+            {formatDate(task.createdAt)}
+          </TableCell>
+
+          {/* Prompt Preview */}
+          <TableCell className="max-w-[300px]">
+            <div className="truncate text-sm" title={promptContent}>
+              {promptContent}
+            </div>
+            {/* Show error message on second line if failed */}
+            {task.status === 'FAILED' && task.failMsg && (
+              <div className="text-xs text-red-500 mt-1 truncate" title={task.failMsg}>
+                Error: {task.failMsg}
+              </div>
+            )}
+          </TableCell>
+
+          {/* Actions */}
+          <TableCell className="text-right">
+            {onPromptSelect && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                onClick={() => onPromptSelect(promptId)}
+              >
+                <ExternalLink className="h-3.5 w-3.5 mr-1" />
+                View
+              </Button>
+            )}
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
   );
 }
