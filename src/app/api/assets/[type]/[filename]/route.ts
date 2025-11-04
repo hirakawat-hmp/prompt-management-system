@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from 'next/server';
  * Serves a stored asset file
  *
  * @param request - Next.js request object
- * @param params - Route parameters { type: 'images' | 'videos', filename: string }
+ * @param params - Route parameters (Promise in Next.js 15+)
  * @returns File response with appropriate headers or error
  *
  * @example
@@ -30,10 +30,11 @@ import { NextRequest, NextResponse } from 'next/server';
  */
 export async function GET(
   request: NextRequest,
-  { params }: { params: { type: string; filename: string } }
+  { params }: { params: Promise<{ type: string; filename: string }> }
 ) {
   try {
-    const { type, filename } = params;
+    // Next.js 15+: params is a Promise and must be awaited
+    const { type, filename } = await params;
 
     // Validate type parameter
     if (type !== 'images' && type !== 'videos') {
