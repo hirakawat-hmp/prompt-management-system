@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/lib/query-client";
 import { Button } from "@/components/ui/button";
+import { AssetModal } from "./AssetModal";
 import {
   Select,
   SelectContent,
@@ -66,6 +67,10 @@ export function PromptDetail({
   const [videoModalOpen, setVideoModalOpen] = useState(false);
   const [imageModel, setImageModel] = useState<'MIDJOURNEY' | 'IMAGEN4'>('MIDJOURNEY');
   const [videoModel, setVideoModel] = useState<'VEO3' | 'SORA2'>('VEO3');
+
+  // Asset modal state
+  const [assetModalOpen, setAssetModalOpen] = useState(false);
+  const [selectedAssetIndex, setSelectedAssetIndex] = useState(0);
 
   const queryClient = useQueryClient();
   const updatePrompt = useUpdatePrompt();
@@ -275,20 +280,32 @@ export function PromptDetail({
           </CardHeader>
           <CardContent>
             <div className="grid grid-cols-2 gap-4">
-              {prompt.assets.map((asset) => (
+              {prompt.assets.map((asset, index) => (
                 <div key={asset.id} className="group relative">
                   {asset.type === "image" ? (
-                    <div className="aspect-square overflow-hidden rounded-lg border bg-muted">
+                    <button
+                      onClick={() => {
+                        setSelectedAssetIndex(index);
+                        setAssetModalOpen(true);
+                      }}
+                      className="w-full aspect-square overflow-hidden rounded-lg border bg-muted cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                    >
                       <img
                         src={asset.url}
                         alt={`Generated asset ${asset.id}`}
                         className="size-full object-cover transition-transform group-hover:scale-105"
                       />
-                    </div>
+                    </button>
                   ) : (
-                    <div className="aspect-square overflow-hidden rounded-lg border bg-muted flex items-center justify-center">
+                    <button
+                      onClick={() => {
+                        setSelectedAssetIndex(index);
+                        setAssetModalOpen(true);
+                      }}
+                      className="w-full aspect-square overflow-hidden rounded-lg border bg-muted flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all"
+                    >
                       <VideoIcon className="size-12 text-muted-foreground" />
-                    </div>
+                    </button>
                   )}
                   <div className="mt-2 flex items-center justify-between">
                     <Badge variant="secondary">{asset.provider}</Badge>
@@ -367,6 +384,14 @@ export function PromptDetail({
           }}
         />
       )}
+
+      {/* Asset Modal */}
+      <AssetModal
+        assets={prompt.assets}
+        initialIndex={selectedAssetIndex}
+        open={assetModalOpen}
+        onOpenChange={setAssetModalOpen}
+      />
     </div>
   );
 }
