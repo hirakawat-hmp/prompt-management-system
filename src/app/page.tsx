@@ -45,7 +45,7 @@ export default function Home() {
         }
         centerPanel={
           <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'graph' | 'tasks')} className="h-full flex flex-col">
-            <div className="border-b px-6 pt-4 flex justify-end">
+            <div className="border-b px-6 py-4 flex justify-end items-center">
               <TabsList>
                 <TabsTrigger value="graph">Graph View</TabsTrigger>
                 <TabsTrigger value="tasks">Task Dashboard</TabsTrigger>
