@@ -53,5 +53,10 @@ export function usePrompts(projectId: string) {
     },
     // Only run query if projectId is provided
     enabled: !!projectId && projectId.trim() !== '',
+    // Refetch every 10 seconds to detect new assets from completed generation tasks
+    // This ensures assets appear automatically after polling completes
+    refetchInterval: 10000,
+    // Continue polling even when window is not focused
+    refetchIntervalInBackground: true,
   });
 }

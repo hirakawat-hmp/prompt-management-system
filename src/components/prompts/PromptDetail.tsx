@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "@/lib/query-client";
 import { Button } from "@/components/ui/button";
 import {
   Select,
@@ -65,6 +67,7 @@ export function PromptDetail({
   const [imageModel, setImageModel] = useState<'MIDJOURNEY' | 'IMAGEN4'>('MIDJOURNEY');
   const [videoModel, setVideoModel] = useState<'VEO3' | 'SORA2'>('VEO3');
 
+  const queryClient = useQueryClient();
   const updatePrompt = useUpdatePrompt();
 
   const handleSubmitFeedback = () => {
@@ -309,7 +312,10 @@ export function PromptDetail({
           promptContent={prompt.content}
           onSuccess={() => {
             setImageModalOpen(false);
-            // Optionally show success notification
+            // Invalidate prompts query to refetch with new assets
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.prompts.byProject(prompt.projectId),
+            });
           }}
         />
       )}
@@ -322,6 +328,10 @@ export function PromptDetail({
           promptContent={prompt.content}
           onSuccess={() => {
             setImageModalOpen(false);
+            // Invalidate prompts query to refetch with new assets
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.prompts.byProject(prompt.projectId),
+            });
           }}
         />
       )}
@@ -334,6 +344,10 @@ export function PromptDetail({
           promptContent={prompt.content}
           onSuccess={() => {
             setVideoModalOpen(false);
+            // Invalidate prompts query to refetch with new assets
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.prompts.byProject(prompt.projectId),
+            });
           }}
         />
       )}
@@ -346,6 +360,10 @@ export function PromptDetail({
           promptContent={prompt.content}
           onSuccess={() => {
             setVideoModalOpen(false);
+            // Invalidate prompts query to refetch with new assets
+            queryClient.invalidateQueries({
+              queryKey: queryKeys.prompts.byProject(prompt.projectId),
+            });
           }}
         />
       )}
