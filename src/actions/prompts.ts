@@ -31,6 +31,7 @@ export interface CreatePromptInput {
   content: string;
   mastraMessageId?: string;
   parentId?: string;
+  userFeedback?: string; // User's instruction/feedback for derivative prompts
 }
 
 /**
@@ -89,6 +90,10 @@ export async function createPrompt(
 
     if (input.parentId) {
       data.parentId = input.parentId;
+    }
+
+    if (input.userFeedback) {
+      data.userFeedback = input.userFeedback.trim();
     }
 
     // Create Prisma prompt

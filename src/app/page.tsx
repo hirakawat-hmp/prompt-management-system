@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { ThreeColumnLayout } from '@/components/layout/ThreeColumnLayout';
 import { ProjectList } from '@/components/projects/ProjectList';
 import { PromptDetail } from '@/components/prompts/PromptDetail';
+import { DerivativePromptModal } from '@/components/prompts/DerivativePromptModal';
 import { PromptGraph } from '@/components/graph';
 import { GenerationTaskDashboard } from '@/components/generation/GenerationTaskDashboard';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -21,6 +22,7 @@ export default function Home() {
   const [selectedProjectId, setSelectedProjectId] = useState<string | undefined>();
   const [selectedPromptId, setSelectedPromptId] = useState<string | undefined>();
   const [activeTab, setActiveTab] = useState<'graph' | 'tasks'>('graph');
+  const [derivativeModalOpen, setDerivativeModalOpen] = useState(false);
 
   // Fetch prompts for the selected project
   const { data: prompts = [] } = usePrompts(selectedProjectId || '');
@@ -34,9 +36,22 @@ export default function Home() {
     setActiveTab('graph'); // Switch to graph view when selecting a prompt
   };
 
+  // Handler for creating a derivative prompt
+  const handleCreateDerivative = () => {
+    if (!selectedPrompt) return;
+    setDerivativeModalOpen(true);
+  };
+
+  // Handler for successful derivative creation
+  const handleDerivativeSuccess = () => {
+    // Prompts will be automatically refetched by React Query
+    // No manual refetch needed
+  };
+
   return (
-    <div className="h-screen">
-      <ThreeColumnLayout
+    <>
+      <div className="h-screen">
+        <ThreeColumnLayout
         leftPanel={
           <ProjectList
             selectedProjectId={selectedProjectId}
@@ -74,10 +89,26 @@ export default function Home() {
             prompt={selectedPrompt}
             onGenerateImage={() => console.log('Generate image')}
             onGenerateVideo={() => console.log('Generate video')}
-            onCreateDerivative={() => console.log('Create derivative')}
+            onCreateDerivative={handleCreateDerivative}
           />
         }
       />
-    </div>
+      </div>
+
+      {/* Derivative Prompt Modal */}
+      {selectedPrompt && selectedProjectId && (
+        <DerivativePromptModal
+          projectId={selectedProjectId}
+          parentPrompt={{
+            id: selectedPrompt.id,
+            type: selectedPrompt.type,
+            content: selectedPrompt.content,
+          }}
+          open={derivativeModalOpen}
+          onOpenChange={setDerivativeModalOpen}
+          onSuccess={handleDerivativeSuccess}
+        />
+      )}
+    </>
   );
 }

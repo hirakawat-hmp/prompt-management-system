@@ -287,140 +287,24 @@ describe('PromptDetail', () => {
     });
   });
 
-  describe('User Feedback Mutations', () => {
-    it('should render feedback form when no userFeedback exists', () => {
-      render(<PromptDetail {...mockProps} />);
 
-      expect(screen.getByPlaceholderText(/add your feedback/i)).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /submit feedback/i })).toBeInTheDocument();
-    });
-
-    it('should submit feedback using mutation hook', async () => {
-      const user = userEvent.setup();
-      render(<PromptDetail {...mockProps} />);
-
-      const feedbackInput = screen.getByPlaceholderText(/add your feedback/i);
-      const submitButton = screen.getByRole('button', { name: /submit feedback/i });
-
-      await user.type(feedbackInput, 'The mountains look too bright');
-      await user.click(submitButton);
-
-      await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledWith(
-          {
-            promptId: 'prompt-1',
-            data: { userFeedback: 'The mountains look too bright' },
-          },
-          expect.any(Object)
-        );
-      });
-    });
-
-    it('should disable submit button when feedback is empty', () => {
-      render(<PromptDetail {...mockProps} />);
-
-      const submitButton = screen.getByRole('button', { name: /submit feedback/i });
-      expect(submitButton).toBeDisabled();
-    });
-
-    it('should disable form during mutation', () => {
-      vi.mocked(hooks.useUpdatePrompt).mockReturnValue({
-        ...defaultMutationState,
-        isPending: true,
-      } as any);
-
-      render(<PromptDetail {...mockProps} />);
-
-      const feedbackInput = screen.getByPlaceholderText(/add your feedback/i);
-      const submitButton = screen.getByRole('button', { name: /submitting/i });
-
-      expect(feedbackInput).toBeDisabled();
-      expect(submitButton).toBeDisabled();
-    });
-
-    it('should clear feedback input after successful submission', async () => {
-      const user = userEvent.setup();
-      let onSuccessCallback: ((result: any) => void) | undefined;
-
-      // Capture the onSuccess callback
-      mockMutate.mockImplementation((variables, options) => {
-        onSuccessCallback = options?.onSuccess;
-      });
-
-      render(<PromptDetail {...mockProps} />);
-
-      const feedbackInput = screen.getByPlaceholderText(/add your feedback/i) as HTMLTextAreaElement;
-      const submitButton = screen.getByRole('button', { name: /submit feedback/i });
-
-      await user.type(feedbackInput, 'Great work!');
-      expect(feedbackInput.value).toBe('Great work!');
-
-      await user.click(submitButton);
-
-      // Simulate successful mutation
-      if (onSuccessCallback) {
-        onSuccessCallback({ success: true, data: {} });
-      }
-
-      await waitFor(() => {
-        expect(feedbackInput.value).toBe('');
-      });
-    });
-
-    it('should display error message when mutation fails', () => {
-      vi.mocked(hooks.useUpdatePrompt).mockReturnValue({
-        ...defaultMutationState,
-        isError: true,
-        error: new Error('Failed to update'),
-      } as any);
-
-      render(<PromptDetail {...mockProps} />);
-
-      expect(screen.getByRole('alert')).toHaveTextContent(/failed to submit feedback/i);
-    });
-
-    it('should hide feedback form when userFeedback already exists', () => {
-      const promptWithFeedback: Prompt = {
+  describe('Derivative Instruction Display', () => {
+    it('should display derivative instruction when userFeedback exists', () => {
+      const promptWithInstruction: Prompt = {
         ...mockPrompt,
-        userFeedback: 'Already submitted feedback',
+        userFeedback: 'Add more details about lighting',
       };
 
-      render(<PromptDetail {...mockProps} prompt={promptWithFeedback} />);
+      render(<PromptDetail {...mockProps} prompt={promptWithInstruction} />);
 
-      expect(screen.queryByPlaceholderText(/add your feedback/i)).not.toBeInTheDocument();
-      expect(screen.queryByRole('button', { name: /submit feedback/i })).not.toBeInTheDocument();
+      expect(screen.getByText('Derivative Instruction')).toBeInTheDocument();
+      expect(screen.getByText('Add more details about lighting')).toBeInTheDocument();
     });
 
-    it('should handle multiline feedback input', async () => {
-      const user = userEvent.setup();
+    it('should not display derivative instruction section when no userFeedback exists', () => {
       render(<PromptDetail {...mockProps} />);
 
-      const feedbackInput = screen.getByPlaceholderText(/add your feedback/i);
-      const multilineFeedback = 'Line 1\nLine 2\nLine 3';
-
-      await user.type(feedbackInput, multilineFeedback);
-      await user.click(screen.getByRole('button', { name: /submit feedback/i }));
-
-      await waitFor(() => {
-        expect(mockMutate).toHaveBeenCalledWith(
-          {
-            promptId: 'prompt-1',
-            data: { userFeedback: multilineFeedback },
-          },
-          expect.any(Object)
-        );
-      });
-    });
-
-    it('should trim whitespace-only feedback', async () => {
-      const user = userEvent.setup();
-      render(<PromptDetail {...mockProps} />);
-
-      const feedbackInput = screen.getByPlaceholderText(/add your feedback/i);
-      await user.type(feedbackInput, '   ');
-
-      const submitButton = screen.getByRole('button', { name: /submit feedback/i });
-      expect(submitButton).toBeDisabled();
+      expect(screen.queryByText('Derivative Instruction')).not.toBeInTheDocument();
     });
   });
 });

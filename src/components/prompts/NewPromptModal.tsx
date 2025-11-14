@@ -28,7 +28,8 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { AlertCircle, Sparkles } from 'lucide-react';
 import { useCreatePrompt } from '@/hooks/useCreatePrompt';
-import { generatePromptWithAI } from '@/actions/generate-prompt';
+import { generatePrompt } from '@/lib/api/prompt-generation';
+import type { Model } from '@/lib/api/prompt-generation';
 
 export interface NewPromptModalProps {
   projectId: string;
@@ -44,6 +45,7 @@ export function NewPromptModal({
   onSuccess,
 }: NewPromptModalProps) {
   const [type, setType] = useState<'image' | 'video'>('image');
+  const [model, setModel] = useState<Model>('imagen4');
   const [manualContent, setManualContent] = useState('');
   const [requirements, setRequirements] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
@@ -56,10 +58,20 @@ export function NewPromptModal({
    */
   const resetForm = () => {
     setType('image');
+    setModel('imagen4');
     setManualContent('');
     setRequirements('');
     setError('');
     setIsGenerating(false);
+  };
+
+  /**
+   * Update model when type changes
+   */
+  const handleTypeChange = (newType: 'image' | 'video') => {
+    setType(newType);
+    // Set default model based on type
+    setModel(newType === 'image' ? 'imagen4' : 'veo3');
   };
 
   /**
@@ -75,13 +87,15 @@ export function NewPromptModal({
     setError('');
 
     try {
-      const result = await generatePromptWithAI({
-        requirements: requirements.trim(),
-        type,
-      });
+      const result = await generatePrompt(model, requirements.trim());
 
       if (result.success) {
-        setManualContent(result.data);
+        // Combine prompt and parameters if available
+        let generatedContent = result.data.prompt;
+        if (result.data.parameters) {
+          generatedContent += `\n\nParameters: ${result.data.parameters}`;
+        }
+        setManualContent(generatedContent);
         setError('');
       } else {
         setError(result.error);
@@ -158,7 +172,7 @@ export function NewPromptModal({
             <Label htmlFor="type-select">Content Type</Label>
             <Select
               value={type}
-              onValueChange={(value: 'image' | 'video') => setType(value)}
+              onValueChange={(value: 'image' | 'video') => handleTypeChange(value)}
             >
               <SelectTrigger id="type-select">
                 <SelectValue />
@@ -166,6 +180,29 @@ export function NewPromptModal({
               <SelectContent>
                 <SelectItem value="image">Image</SelectItem>
                 <SelectItem value="video">Video</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          {/* Model Selector */}
+          <div className="space-y-2">
+            <Label htmlFor="model-select">AI Model</Label>
+            <Select value={model} onValueChange={(value: Model) => setModel(value)}>
+              <SelectTrigger id="model-select">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {type === 'image' ? (
+                  <>
+                    <SelectItem value="imagen4">Imagen4 (Google)</SelectItem>
+                    <SelectItem value="midjourney">Midjourney</SelectItem>
+                  </>
+                ) : (
+                  <>
+                    <SelectItem value="veo3">Veo3 (Google)</SelectItem>
+                    <SelectItem value="sora2">Sora2 (OpenAI)</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>

@@ -84,8 +84,8 @@ export async function createGenerationTask(
     const validation = ProviderParamsSchema.safeParse(input.providerParams);
     if (!validation.success) {
       console.error('[createGenerationTask] Validation failed:', validation.error);
-      const errorMessages = validation.error?.errors
-        ?.map((e) => e.message)
+      const errorMessages = validation.error?.issues
+        ?.map((e: { message: string }) => e.message)
         .join(', ') || 'Invalid parameters';
       return {
         success: false,
