@@ -5,7 +5,8 @@ import { LibSQLStore } from '@mastra/libsql';
 import { join } from 'path';
 import { weatherWorkflow } from './workflows/weather-workflow';
 import { weatherAgent } from './agents/weather-agent';
-import { promptGeneratorAgent } from './agents/prompt-generator-agent';
+import { imagePromptAgent } from './agents/image-prompt-agent';
+import { videoPromptAgent } from './agents/video-prompt-agent';
 
 // Resolve absolute path to database file
 // In Next.js, process.cwd() returns the project root directory
@@ -13,7 +14,7 @@ const DB_PATH = join(process.cwd(), 'prisma', 'mastra.db');
 
 export const mastra = new Mastra({
   workflows: { weatherWorkflow },
-  agents: { weatherAgent, promptGeneratorAgent },
+  agents: { weatherAgent, imagePromptAgent, videoPromptAgent },
   storage: new LibSQLStore({
     // Persistent storage for observability, scores, messages, and threads
     // Shared with Prisma for application data (Project, Prompt, Asset)
