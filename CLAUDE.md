@@ -2,6 +2,28 @@
 
 このプロジェクトでは、Claude Codeのカスタムsubagentを活用した**TDD（Test-Driven Development）による高速並列開発**を実践します。
 
+## 📋 プロジェクト概要
+
+### プロジェクトの目的
+**AI画像・動画生成用のプロンプト管理システム**
+
+ユーザーがAI生成モデル（Midjourney, Imagen, Veo等）用のプロンプトを階層的に管理し、生成タスクを実行・追跡できるWebアプリケーション。
+
+### 主要機能
+1. **プロジェクト管理**: 複数のプロンプトプロジェクトを管理
+2. **プロンプト作成**: 画像/動画生成用のプロンプトをAI支援で作成
+3. **階層構造**: プロンプトの親子関係を持った階層的管理
+4. **グラフ可視化**: プロンプト間の関係を視覚的に表示
+5. **AI生成実行**: Kie.ai API経由で複数のAIモデルを使用
+6. **生成履歴管理**: 各プロンプトの生成タスク履歴を追跡
+7. **アセット管理**: 生成された画像/動画を紐付けて管理
+
+### ユースケース
+- プロンプトエンジニアがプロンプトのバリエーションを体系的に管理
+- チームでプロンプトのテンプレートを共有・再利用
+- 生成結果と元プロンプトの紐付けを保持
+- プロンプトの改善履歴を追跡
+
 ## 🎯 開発戦略
 
 ### 2フェーズ並列開発
@@ -27,14 +49,23 @@
 - **UI**: React 19 + TypeScript 5
 - **Styling**: Tailwind CSS v4
 - **Components**: shadcn/ui (New York style, Neutral colors)
+- **State Management**: React Query (@tanstack/react-query v5)
+- **Form Management**: React Hook Form v7 + Zod v4
+- **Graph Visualization**: React Flow (@xyflow/react) + ELKjs
+- **Layout**: React Resizable Panels v3
 - **Stories**: Storybook v10
-- **Testing**: Vitest v4 + Playwright
+- **Testing**: Vitest v4 + Playwright + Testing Library
 
 ### Backend
-- **Framework**: Next.js 16 API Routes
+- **Framework**: Next.js 16 API Routes + Server Actions
 - **AI**: Mastra v0.23.3 + Google Gemini 2.5 Pro
-- **Database**: LibSQL (via Mastra storage)
+- **Database**: Prisma v6 + SQLite (LibSQL)
+- **Validation**: Zod v4
 - **Testing**: Vitest v4
+
+### Generation Services
+- **Kie.ai**: Image & Video generation (Midjourney, Imagen4, Veo3)
+- **Provider Abstraction**: Unified generation service layer
 
 ## 🔄 開発ワークフロー
 
@@ -93,31 +124,91 @@ UIコンポーネントのTDD実装:
 
 ```
 src/
-├── agents/                    # Mastra AI agents
-│   ├── weatherAgent.ts
-│   ├── weatherAgent.test.ts
-│   └── tools/
+├── actions/                   # Next.js Server Actions
+│   └── generation/           # Generation-related actions
 ├── app/
 │   ├── api/                   # Next.js API routes
-│   │   └── [endpoint]/
-│   │       ├── route.ts
-│   │       └── route.test.ts
-│   └── [pages]/              # Next.js pages
+│   │   ├── prompts/          # Prompt CRUD endpoints
+│   │   ├── projects/         # Project CRUD endpoints
+│   │   └── generation/       # Generation task endpoints
+│   │       └── tasks/        # Task status polling
+│   ├── page.tsx              # Main application page
+│   ├── layout.tsx            # Root layout
+│   └── globals.css           # Global styles
 ├── components/
-│   ├── ui/                    # shadcn/ui components
+│   ├── ui/                    # shadcn/ui base components
 │   │   ├── button.tsx
 │   │   ├── button.stories.tsx
-│   │   └── button.test.tsx
-│   └── [features]/           # Feature components
+│   │   ├── card.tsx
+│   │   ├── input.tsx
+│   │   ├── select.tsx
+│   │   ├── dialog.tsx        # Modal dialogs
+│   │   ├── popover.tsx       # Popover menus
+│   │   ├── tabs.tsx          # Tab navigation
+│   │   ├── slider.tsx        # Range slider
+│   │   └── ...               # 他の shadcn/ui components
+│   ├── layout/               # Layout components
+│   │   └── ThreeColumnLayout.tsx  # 3-column resizable layout
+│   ├── prompts/              # Prompt-related components
+│   │   └── PromptDetail.tsx
+│   ├── projects/             # Project-related components
+│   │   └── ProjectList.tsx
+│   ├── graph/                # Graph visualization
+│   │   ├── PromptGraph.tsx
+│   │   ├── PromptNode.tsx
+│   │   ├── PromptEdge.tsx
+│   │   └── utils/
+│   │       └── elkLayoutGraph.ts  # ELKjs layout algorithm
+│   ├── generation/           # Generation UI components
+│   │   └── modals/
+│   │       └── CreatePromptModal.tsx
+│   └── providers/            # React Context providers
+│       └── QueryProvider.tsx # React Query provider
+├── hooks/                    # Custom React hooks
+│   ├── usePrompts.ts         # Prompt data fetching
+│   ├── useProjects.ts        # Project data fetching
+│   └── useGeneration.ts      # Generation task hooks
 ├── lib/
-│   └── utils.ts              # CN utility, etc.
-└── mastra.config.ts          # Mastra configuration
+│   ├── utils.ts              # CN utility, etc.
+│   └── generation/           # Generation service layer
+│       └── services/
+│           └── kie/          # Kie.ai integration
+│               ├── client.ts
+│               ├── types.ts
+│               └── models/   # Model-specific implementations
+│                   ├── midjourney.ts
+│                   ├── imagen.ts
+│                   └── veo.ts
+├── mastra/                   # Mastra AI framework
+│   ├── agents/               # AI agent definitions
+│   ├── workflows/            # Workflow orchestrations
+│   ├── tools/                # Tool implementations
+│   └── index.ts              # Mastra instance setup
+├── types/                    # TypeScript type definitions
+│   ├── index.ts
+│   ├── prompt.ts
+│   ├── project.ts
+│   ├── graph.ts
+│   └── asset.ts
+├── test-utils/               # Testing utilities
+│   └── setup.ts
+└── stories/                  # Storybook example stories
+
+prisma/
+├── schema.prisma             # Database schema definition
+├── migrations/               # Database migrations
+├── seed.ts                   # Database seeding script
+└── dev.db                    # SQLite database file
 
 docs/
 ├── development/              # 開発ドキュメント
 │   ├── storybook.md
 │   └── shadcn-storybook.md
-└── kie/                      # Kieサービス用
+└── kie/                      # Kie.ai API documentation
+    ├── common/
+    ├── imagen/
+    ├── midjourney/
+    └── upload/
 
 .claude/
 └── agents/                   # カスタムsubagent定義
@@ -127,6 +218,15 @@ docs/
     ├── ui-implementor.md
     ├── backend-implementor.md
     └── README.md
+
+.serena/
+└── memories/                 # Serena memory storage
+    ├── project_overview.md
+    ├── codebase_structure.md
+    ├── database_integration_strategy.md
+    ├── generation-task-architecture.md
+    ├── kie-api-implementation-lessons.md
+    └── ...                   # 他のmemoryファイル
 ```
 
 ## 🎨 コードスタイル
@@ -188,6 +288,12 @@ npm start
 # Storybook起動
 npm run storybook
 
+# データベース
+npm run db:seed        # データベースをシードデータで初期化
+npm run db:reset       # データベースをリセット（マイグレーション再実行+シード）
+npx prisma studio      # Prisma Studio起動（データベースGUI）
+npx prisma migrate dev # 新しいマイグレーション作成
+
 # shadcn/uiコンポーネント追加
 npx shadcn@latest add [component-name]
 ```
@@ -197,6 +303,8 @@ npx shadcn@latest add [component-name]
 - [Storybook Setup](./docs/development/storybook.md)
 - [shadcn/ui + Storybook Integration](./docs/development/shadcn-storybook.md)
 - [Custom Agents Guide](./.claude/agents/README.md)
+- [Kie.ai API Documentation](./docs/kie/)
+- [Serena Memories](./.serena/memories/) - プロジェクト固有の知識ベース
 
 ## 💡 ベストプラクティス
 
@@ -244,6 +352,226 @@ WCAG準拠、キーボードナビゲーション対応
 - **モデルごとにレスポンス構造が異なる**（文字列配列/オブジェクト配列/JSON文字列）
 - エンドポイント命名規則も異なる（camelCase/kebab-case）
 - 詳細は `.serena/memories/kie-api-implementation-lessons.md` 参照
+
+### 8. React Query使用時の注意点
+- **サーバー/クライアント境界を意識する**
+  - `useQuery`/`useMutation`は Client Component でのみ使用
+  - Server Component では直接 Prisma を呼び出す
+- **適切なキャッシュ無効化**
+  - Mutation成功時は関連するクエリを `invalidateQueries` で更新
+  - 楽観的更新（Optimistic Updates）は慎重に使用
+- **エラーハンドリング**
+  - `onError` コールバックでユーザーフレンドリーなエラー表示
+
+### 9. Prismaベストプラクティス
+- **トランザクション使用**
+  - 複数テーブルの更新は `prisma.$transaction` でアトミックに実行
+- **リレーション取得の最適化**
+  - 必要なリレーションのみ `include` で取得（N+1問題回避）
+- **型安全性**
+  - Prisma生成型を活用（`Prisma.PromptGetPayload<...>`）
+
+### 10. フォームバリデーション（Zod + React Hook Form）
+- **Zodスキーマ定義を一箇所に集約**
+  - `src/lib/schemas/` にスキーマを配置
+  - フロントエンド・バックエンドで共有
+- **明確なエラーメッセージ**
+  - `.refine()` でカスタムバリデーション
+  - ユーザーフレンドリーなメッセージを設定
+
+---
+
+## 🏗️ アーキテクチャパターン
+
+### データベース設計（Prisma）
+
+#### 主要モデル
+
+**Project（プロジェクト）**
+- プロンプト管理の最上位単位
+- 複数のPromptを持つ
+
+**Prompt（プロンプト）**
+- プロジェクトに紐づく
+- 階層構造（親子関係）を持つ
+- 画像/動画生成用のプロンプト
+- 複数のAsset（生成物）を持つ
+- 複数のGenerationTask（生成履歴）を追跡
+
+**Asset（生成物）**
+- 画像または動画
+- Provider情報（Midjourney, Veo, etc.）
+- メタデータ（幅、高さ、ファイルサイズ、etc.）
+
+**GenerationTask（生成タスク）**
+- AI生成の実行履歴
+- ステータス追跡（PENDING, SUCCESS, FAILED）
+- 外部API（Kie.ai）のタスクID管理
+- エラー情報の記録
+
+#### データベース操作パターン
+
+```typescript
+// ❌ 直接Prisma Clientを使用しない
+import { prisma } from '@/lib/prisma'
+
+// ✅ React Query経由で使用
+import { usePrompts } from '@/hooks/usePrompts'
+const { data, isLoading } = usePrompts(projectId)
+
+// ✅ Server Actions経由で更新
+import { createPrompt } from '@/actions/generation/createPrompt'
+await createPrompt({ projectId, content, type })
+```
+
+### データフェッチング（React Query）
+
+#### クエリキー設計
+
+```typescript
+// プロジェクト一覧
+['projects']
+
+// 特定プロジェクトのプロンプト一覧
+['prompts', projectId]
+
+// 特定プロンプトの詳細
+['prompt', promptId]
+
+// 生成タスクのステータス
+['generation-task', taskId]
+```
+
+#### Mutation パターン
+
+```typescript
+const mutation = useMutation({
+  mutationFn: createPrompt,
+  onSuccess: () => {
+    // キャッシュを無効化して再フェッチ
+    queryClient.invalidateQueries({ queryKey: ['prompts', projectId] })
+  }
+})
+```
+
+### Server Actions vs API Routes
+
+#### Server Actions を使うケース
+- データ変更操作（Create, Update, Delete）
+- フォーム送信
+- サーバー側バリデーションが必要な処理
+
+```typescript
+// src/actions/generation/createPrompt.ts
+'use server'
+
+export async function createPrompt(data: CreatePromptInput) {
+  const validated = schema.parse(data)
+  return await prisma.prompt.create({ data: validated })
+}
+```
+
+#### API Routes を使うケース
+- ポーリングが必要な処理（生成タスクのステータス確認）
+- Webhook受信
+- 外部サービスとの連携
+
+```typescript
+// src/app/api/generation/tasks/[id]/route.ts
+export async function GET(request: Request, { params }: { params: { id: string } }) {
+  const task = await prisma.generationTask.findUnique({
+    where: { id: params.id }
+  })
+  return Response.json(task)
+}
+```
+
+### 生成サービスアーキテクチャ
+
+#### レイヤー構造
+
+```
+UI Component (CreatePromptModal)
+    ↓
+React Query Hook (useGenerateImage)
+    ↓
+Server Action (createPromptAndGenerate)
+    ↓
+Generation Service (KieService)
+    ↓
+Model-specific Handler (MidjourneyHandler, ImagenHandler, VeoHandler)
+    ↓
+Kie.ai API Client
+```
+
+#### 新しいモデル追加時の手順
+
+1. **Prismaスキーマ更新**: `enum GenerationModel` に追加
+2. **型定義追加**: `src/lib/generation/services/kie/types.ts`
+3. **モデルハンドラー作成**: `src/lib/generation/services/kie/models/[model].ts`
+4. **KieService統合**: メインサービスに登録
+5. **UIオプション追加**: CreatePromptModalの選択肢に追加
+6. **テスト作成**: TDD原則に従う
+
+### グラフ可視化アーキテクチャ
+
+#### ELKjs + React Flow
+
+```typescript
+// 1. データ変換（Prompt[] → ReactFlow Nodes/Edges）
+const { nodes, edges } = convertPromptsToGraph(prompts)
+
+// 2. ELKjsでレイアウト計算
+const layoutedGraph = await elkLayoutGraph(nodes, edges)
+
+// 3. React Flowで描画
+<ReactFlow nodes={layoutedGraph.nodes} edges={layoutedGraph.edges} />
+```
+
+---
+
+## 🔐 環境変数と設定
+
+### 必須環境変数
+
+```bash
+# .env ファイル
+
+# Database
+DATABASE_URL="file:./prisma/dev.db"
+
+# Kie.ai API
+KIE_API_KEY="your-kie-api-key-here"
+
+# Google Generative AI (Mastra用)
+GOOGLE_GENERATIVE_AI_API_KEY="your-google-ai-api-key-here"
+
+# Next.js
+NEXT_PUBLIC_APP_URL="http://localhost:3000"
+```
+
+### 設定ファイル
+
+**Prisma (`prisma.config.ts`)**
+- データベース接続設定
+- マイグレーション設定
+
+**Next.js (`next.config.ts`)**
+- ビルド設定
+- 環境変数の検証
+
+**Tailwind (`postcss.config.mjs`)**
+- Tailwind CSS v4設定
+- PostCSS設定
+
+**Vitest (`vitest.config.ts`)**
+- テスト環境設定
+- カバレッジ設定
+
+**shadcn/ui (`components.json`)**
+- コンポーネントスタイル: "new-york"
+- カラーテーマ: "neutral"
+- パスエイリアス設定
 
 ---
 
